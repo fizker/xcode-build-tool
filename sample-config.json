@@ -7,4 +7,9 @@
   , "path/to/other.mobileprovision"
   ]
 , "deploy": "path/to/deploy-script"
+, "build":
+  { "target": "target-name"
+  , "configuration": "Debug/Release"
+  , "output": "path/to/build/dir"
+  }
 }
