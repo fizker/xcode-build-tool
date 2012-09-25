@@ -18,6 +18,21 @@ Required
     installed in the path.
 
 
+Why use Node.js and not bash?
+-----------------------------
+
+I did the original test in bash only, but stopped when I wanted it to be an
+external project. Since many of the values used is dependent on the current
+version of the code, it would be prudent to keep this in the repository along
+with the code.
+
+A bash-script that calls the build-script could do this as well, of course, but
+I like a static configuration-file more than a collection of scripts.
+
+Oh, and I am much more confident in javascript than bash-scripting, which is an
+even better reason :).
+
+
 Credits
 -------
 

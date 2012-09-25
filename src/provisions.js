@@ -8,6 +8,7 @@ var exec = require('child_process').execFile
   , fasync = require('fasync')
   , fs = require('fs')
   , path = require('path')
+  , utils = require('./utils')
 
 function parse(provisions, complete) {
 	var arr = []
@@ -44,35 +45,13 @@ function install(provisions) {
 	      process.env.HOME
 	    , 'Library/MobileDevice/Provisioning Profiles'
 	    )
-	recurMkdirSync(installPath)
+	utils.recurMkdirSync(installPath)
 	return provisions.map(function(p) {
 		p.installedPath = path.join(
 		    installPath
 		  , p.uuid + path.extname(p.path)
 		  )
-		copy(p.path, p.installedPath)
+		utils.copy(p.path, p.installedPath)
 		return p
 	})
-}
-
-function copy(from, to) {
-	fs.writeFileSync(to, fs.readFileSync(from))
-}
-function recurMkdirSync(p, mode) {
-	p
-		.split(path.sep)
-		.reduce(function(arr, p) {
-			if(arr.length == 0) {
-				return [p]
-			}
-			p = path.join(arr[arr.length-1], p);
-			arr.push(p)
-			return arr
-		}, ['/'])
-		.filter(function(p) {
-			return p && !fs.existsSync(p)
-		})
-		.forEach(function(p) {
-			fs.mkdirSync(p)
-		})
 }
