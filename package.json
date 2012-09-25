@@ -3,7 +3,7 @@
 , "description": "Xcode build tool"
 , "main": "index.js"
 , "dependencies":
-  {
+  { "fasync": "1.0.0"
   }
 , "devDependencies":
   {
