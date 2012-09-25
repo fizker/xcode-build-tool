@@ -1,0 +1,18 @@
+{ "name": "xcode"
+, "version": "0.0.0"
+, "description": "Xcode build tool"
+, "main": "index.js"
+, "dependencies":
+  {
+  }
+, "devDependencies":
+  {
+  }
+, "repository":
+  { "type": "git"
+  , "url": "https://github.com/fizker/scripts"
+  }
+, "author": "Benjamin Horsleben"
+, "license": "WTFPL"
+, "private": true
+}

@@ -1,0 +1,10 @@
+{ "keychain":
+  { "path": "path/to/keychain/with/certificate"
+  , "password": "password-for-keychain"
+  }
+, "provisions":
+  [ "path/to.mobileprovision"
+  , "path/to/other.mobileprovision"
+  ]
+, "deploy": "path/to/deploy-script"
+}
