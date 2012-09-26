@@ -8,16 +8,17 @@ var exec = require('child_process').execFile
 
   , baseDir
 
+  , confPath = process.argv[2]
   , conf
 
-if(!process.argv[2]) {
+if(!confPath) {
 	var executable = process.env.BUILD_EXEC || path.basename(process.argv[1])
 	console.log('Use as: %s path/to/config.json', executable)
 	process.exit(1)
 }
-conf = require(process.argv[2])
+conf = require(confPath)
 
-baseDir = path.dirname(conf.project.path)
+baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
 // The list of jobs, in the order that they execute
@@ -97,6 +98,8 @@ function createIpa(done) {
 	var pool = fasync.pool()
 	pool.on('empty', done)
 
+	utils.recurMkdirSync(conf.deploy.output)
+
 	fs.readDir(
 	  path.join(
 	    conf.build.output
@@ -117,7 +120,7 @@ function createIpa(done) {
 		  , 'iphoneos'
 		  , 'PackageApplication'
 		  , '-v'
-		  , filename
+		  , path.join(baseDir, conf.build.output, filename)
 		  , '-o'
 		  , output
 		  ]
