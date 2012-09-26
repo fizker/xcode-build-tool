@@ -9,7 +9,10 @@
 , "project":
   { "path": "path/to/xcode-project"
   }
-, "deploy": "path/to/deploy-script"
+, "deploy":
+  { "script": "path/to/deploy-script"
+  , "output": "path/to/place/ipa"
+  }
 , "build":
   { "target": "target-name"
   , "configuration": "Debug/Release"

@@ -20,12 +20,15 @@ conf = require(process.argv[2])
 baseDir = path.dirname(conf.project.path)
 process.chdir(baseDir)
 
+// The list of jobs, in the order that they execute
 var jobs =
     [ parseProvisions
     , installProvisions
     , addKeychain
     , unlockKeychain
     , buildTarget
+    , createIpa
+    , deploy
     , clean
     ]
   , nextJob = 0
@@ -88,6 +91,43 @@ function buildTarget(done) {
 	  ]
 	, done
 	)
+}
+
+function createIpa(done) {
+	var pool = fasync.pool()
+	pool.on('empty', done)
+
+	fs.readDir(
+	  path.join(
+	    conf.build.output
+	  , conf.build.configuration + '-iphoneos'
+	, package
+	)
+
+	function package(err, filename) {
+		if(!/\.app$/.test(filename)) {
+			return
+		}
+		var ipaName = path.basename(filename) + '.ipa'
+		  , output = path.join(conf.deploy.output, ipaName)
+
+		exec(
+		  'xcrun'
+		, [ '-sdk'
+		  , 'iphoneos'
+		  , 'PackageApplication'
+		  , '-v'
+		  , filename
+		  , '-o'
+		  , output
+		  ]
+		  , pool.register()
+		)
+	}
+}
+
+function deploy(done) {
+	exec(conf.deploy.script, done)
 }
 
 function clean(done) {
