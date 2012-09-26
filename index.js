@@ -6,7 +6,7 @@ var exec = require('child_process').execFile
 
   , provisions = require('./src/provisions')
 
-  , baseDir = path.join(__dirname, '..')
+  , baseDir
 
   , conf
 
@@ -17,9 +17,8 @@ if(!process.argv[2]) {
 }
 conf = require(process.argv[2])
 
-process.env.BASEDIR = baseDir
-process.env.KEYCHAIN_LOCATION = conf.keychain.path
-process.env.KEYCHAIN_PASSWORD = conf.keychain.password
+baseDir = path.dirname(conf.project.path)
+process.chdir(baseDir)
 
 var jobs =
     [ parseProvisions

@@ -6,6 +6,9 @@
   [ "path/to.mobileprovision"
   , "path/to/other.mobileprovision"
   ]
+, "project":
+  { "path": "path/to/xcode-project"
+  }
 , "deploy": "path/to/deploy-script"
 , "build":
   { "target": "target-name"
