@@ -1,7 +1,7 @@
 { "name": "xcode"
 , "version": "0.0.0"
 , "description": "Xcode build tool"
-, "main": "build.js"
+, "main": "index.js"
 , "dependencies":
   { "fasync": "1.0.0"
   }
