@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-var exec = require('child_process').execFile
+var exec = require('child_process').spawn
   , path = require('path')
   , fs = require('fs')
+  , fasync = require('fasync')
 
+  , utils = require('./src/utils')
   , provisions = require('./src/provisions')
 
   , baseDir
@@ -11,12 +13,15 @@ var exec = require('child_process').execFile
   , confPath = process.argv[2]
   , conf
 
+  , log = console.log.bind(console)
+
 if(!confPath) {
 	var executable = process.env.BUILD_EXEC || path.basename(process.argv[1])
 	console.log('Use as: %s path/to/config.json', executable)
 	process.exit(1)
 }
-conf = require(confPath)
+
+conf = require(path.relative(__dirname, confPath))
 
 baseDir = path.dirname(confPath)
 process.chdir(baseDir)
@@ -37,47 +42,63 @@ var jobs =
 executeNextJob()
 
 function executeNextJob(err) {
+	if(err) {
+		if(typeof(err) == 'number') {
+			process.exit(err)
+		}
+		log(jobs[nextJob].name)
+		throw err
+	}
+
 	if(jobs.length > nextJob) {
 		jobs[nextJob++](executeNextJob)
 	}
 }
 
 function parseProvisions(done) {
+	log('Parsing provisions')
 	provisions.parse(conf.provisions, function(err, parsedProvisions) {
 		conf.parsedProvisions = parsedProvisions
-		done()
+		done(err)
 	})
 }
 
 function installProvisions(done) {
+	log('Installing provisions')
 	conf.installedProvisions = provisions.install(conf.parsedProvisions)
 	done()
 }
 
 function addKeychain(done) {
+	log('Adding keychain: %s', path.resolve(conf.keychain.path))
 	exec(
 	  'security'
 	, [ 'default-keychain'
 	  , '-s'
-	  , conf.keychain.path
+	  , path.resolve(conf.keychain.path)
 	  ]
-	, done
+	, { stdio: 'inherit'
+	  }
 	)
 }
 
 function unlockKeychain(done) {
+	log('Unlocking keychain')
 	exec(
 	  'security'
 	, [ 'unlock-keychain'
 	  , '-p'
 	  , conf.keychain.password
-	  , conf.keychain.path
+	  , path.resolve(conf.keychain.path)
 	  ]
-	, done
+	, { stdio: 'inherit'
+	  }
 	)
+		.on('exit', done)
 }
 
 function buildTarget(done) {
+	log('Building target')
 	utils.recurMkdirSync(conf.build.output)
 	exec(
 	  'xcodebuild'
@@ -85,29 +106,34 @@ function buildTarget(done) {
 	  , conf.build.target
 	  , '-configuration'
 	  , conf.build.configuration
-	  , 'SYMROOT'
-	  , conf.build.output
+	  , 'SYMROOT=' + path.resolve(conf.build.output)
 	  , 'clean'
 	  , 'build'
 	  ]
-	, done
+	, { cwd: path.dirname(conf.project.path)
+	  , stdio: 'inherit'
+	  }
 	)
+		.on('exit', done)
 }
 
 function createIpa(done) {
 	var pool = fasync.pool()
 	pool.on('empty', done)
 
-	utils.recurMkdirSync(conf.deploy.output)
+	log('Creating IPA files')
 
-	fs.readDir(
+	utils.recurMkdirSync(path.resolve(conf.deploy.output))
+
+	fs.readdir(
 	  path.join(
 	    conf.build.output
 	  , conf.build.configuration + '-iphoneos'
-	, package
+	  )
+	, function(err, files) { files.forEach(package) }
 	)
 
-	function package(err, filename) {
+	function package(filename) {
 		if(!/\.app$/.test(filename)) {
 			return
 		}
@@ -124,16 +150,20 @@ function createIpa(done) {
 		  , '-o'
 		  , output
 		  ]
-		  , pool.register()
+		, { stdio: 'inherit'
+		  }
 		)
+			.on('exit', done)
 	}
 }
 
 function deploy(done) {
+	log('Calling deploy script')
 	exec(conf.deploy.script, done)
 }
 
 function clean(done) {
+	log('Cleaning after ourselves')
 	provisions.clean(conf.installedProvisions)
 	done()
 }
