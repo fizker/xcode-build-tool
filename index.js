@@ -46,7 +46,7 @@ function executeNextJob(err) {
 		if(typeof(err) == 'number') {
 			process.exit(err)
 		}
-		log(jobs[nextJob].name)
+		log(jobs[nextJob-1].name)
 		throw err
 	}
 
@@ -80,6 +80,7 @@ function addKeychain(done) {
 	, { stdio: 'inherit'
 	  }
 	)
+		.on('exit', done)
 }
 
 function unlockKeychain(done) {
@@ -119,19 +120,18 @@ function buildTarget(done) {
 
 function createIpa(done) {
 	var pool = fasync.pool()
+	  , appDirectory =
+	    path.join(
+	      conf.build.output
+	    , conf.build.configuration + '-iphoneos'
+	    )
 	pool.on('empty', done)
 
 	log('Creating IPA files')
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	fs.readdir(
-	  path.join(
-	    conf.build.output
-	  , conf.build.configuration + '-iphoneos'
-	  )
-	, function(err, files) { files.forEach(package) }
-	)
+	fs.readdir(appDirectory, function(err, files) { files.forEach(package) })
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
@@ -146,9 +146,9 @@ function createIpa(done) {
 		  , 'iphoneos'
 		  , 'PackageApplication'
 		  , '-v'
-		  , path.join(baseDir, conf.build.output, filename)
+		  , path.join(appDirectory, filename)
 		  , '-o'
-		  , output
+		  , path.resolve(output)
 		  ]
 		, { stdio: 'inherit'
 		  }
@@ -159,7 +159,14 @@ function createIpa(done) {
 
 function deploy(done) {
 	log('Calling deploy script')
-	exec(conf.deploy.script, done)
+	exec(
+	  conf.deploy.script
+	, [
+	  ]
+	, { stdio: 'inherit'
+	  }
+	)
+		.on('exit', done)
 }
 
 function clean(done) {
