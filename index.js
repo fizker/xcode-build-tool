@@ -73,7 +73,7 @@ function addKeychain(done) {
 	log('Adding keychain: %s', path.resolve(conf.keychain.path))
 	exec(
 	  'security'
-	, [ 'default-keychain'
+	, [ 'list-keychains'
 	  , '-s'
 	  , path.resolve(conf.keychain.path)
 	  ]
