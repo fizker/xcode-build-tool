@@ -69,7 +69,7 @@ function parseProvisions(done) {
 
 function installProvisions(done) {
 	log('Installing provisions')
-	conf.products.foreach(function(product) {
+	conf.products.forEach(function(product) {
 		product.installedProvision = provisions.install(product.parsedProvision)
 	})
 	done()
@@ -107,15 +107,15 @@ function unlockKeychain(done) {
 function buildTarget(done) {
 	log('Building target')
 	var targets = conf.products.map(function(product) {
-		function(done) {
-			utils.recurMkdirSync(product.output)
+		return function(done) {
+			utils.recurMkdirSync(conf.build.output)
 			exec(
 			  'xcodebuild'
 			, [ '-target'
 			  , product.target
 			  , '-configuration'
 			  , product.configuration
-			  , 'SYMROOT=' + path.resolve(product.output)
+			  , 'SYMROOT=' + path.resolve(conf.build.output)
 			  , 'clean'
 			  , 'build'
 			  ]
@@ -123,7 +123,10 @@ function buildTarget(done) {
 			  , stdio: 'inherit'
 			  }
 			)
-				.on('exit', done)
+				.on('error', done)
+				.on('exit', function() {
+					done()
+				})
 		}
 	})
 	fasync.waterfall(targets, done)
@@ -131,18 +134,21 @@ function buildTarget(done) {
 
 function createIpa(done) {
 	var pool = fasync.pool()
-	  , appDirectory =
-	    path.join(
-	      conf.build.output
-	    , conf.build.configuration + '-iphoneos'
-	    )
 	pool.on('empty', done)
 
 	log('Creating IPA files')
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	fs.readdir(appDirectory, function(err, files) { files.forEach(package) })
+	fs.readdirSync(conf.build.output).forEach(function(dir) {
+		var fullPath = path.join(conf.build.output, dir)
+		if(!fs.statSync(fullPath).isDirectory()) {
+			return
+		}
+		fs.readdirSync(fullPath).forEach(function(file) {
+			package(path.join(fullPath, file))
+		})
+	})
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
@@ -157,14 +163,14 @@ function createIpa(done) {
 		  , 'iphoneos'
 		  , 'PackageApplication'
 		  , '-v'
-		  , path.join(appDirectory, filename)
+		  , filename
 		  , '-o'
 		  , path.resolve(output)
 		  ]
 		, { stdio: 'inherit'
 		  }
 		)
-			.on('exit', done)
+			.on('exit', pool.register())
 	}
 }
 

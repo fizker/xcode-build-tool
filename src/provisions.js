@@ -11,7 +11,6 @@ var exec = require('child_process').execFile
 
 function parse(provision, complete) {
 	var arr = []
-	  , done = fasync.pool()
 
 	exec(
 	  'mobileprovisionParser'
