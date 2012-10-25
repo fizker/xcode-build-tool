@@ -57,15 +57,21 @@ function executeNextJob(err) {
 
 function parseProvisions(done) {
 	log('Parsing provisions')
-	provisions.parse(conf.provisions, function(err, parsedProvisions) {
-		conf.parsedProvisions = parsedProvisions
-		done(err)
+	var pool = fasync.pool()
+	pool.on('empty', done)
+
+	conf.products.forEach(function(product) {
+		provisions.parse(product.provision, pool.register(function(err, parsedProvision) {
+			product.parsedProvision = parsedProvision;
+		}))
 	})
 }
 
 function installProvisions(done) {
 	log('Installing provisions')
-	conf.installedProvisions = provisions.install(conf.parsedProvisions)
+	conf.products.foreach(function(product) {
+		product.installedProvision = provisions.install(product.parsedProvision)
+	})
 	done()
 }
 
@@ -100,22 +106,27 @@ function unlockKeychain(done) {
 
 function buildTarget(done) {
 	log('Building target')
-	utils.recurMkdirSync(conf.build.output)
-	exec(
-	  'xcodebuild'
-	, [ '-target'
-	  , conf.build.target
-	  , '-configuration'
-	  , conf.build.configuration
-	  , 'SYMROOT=' + path.resolve(conf.build.output)
-	  , 'clean'
-	  , 'build'
-	  ]
-	, { cwd: path.dirname(conf.project.path)
-	  , stdio: 'inherit'
-	  }
-	)
-		.on('exit', done)
+	var targets = conf.products.map(function(product) {
+		function(done) {
+			utils.recurMkdirSync(product.output)
+			exec(
+			  'xcodebuild'
+			, [ '-target'
+			  , product.target
+			  , '-configuration'
+			  , product.configuration
+			  , 'SYMROOT=' + path.resolve(product.output)
+			  , 'clean'
+			  , 'build'
+			  ]
+			, { cwd: path.dirname(conf.project.path)
+			  , stdio: 'inherit'
+			  }
+			)
+				.on('exit', done)
+		}
+	})
+	fasync.waterfall(targets, done)
 }
 
 function createIpa(done) {
@@ -171,6 +182,8 @@ function deploy(done) {
 
 function clean(done) {
 	log('Cleaning after ourselves')
-	provisions.clean(conf.installedProvisions)
+	conf.products.forEach(function(product) {
+		provisions.clean(product.installedProvision)
+	})
 	done()
 }
