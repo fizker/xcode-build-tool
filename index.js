@@ -23,6 +23,10 @@ if(!confPath) {
 
 conf = require(path.relative(__dirname, confPath))
 
+if(!conf.products) {
+	conf.products = [ conf.product ]
+}
+
 baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
