@@ -2,10 +2,17 @@
   { "path": "path/to/keychain/with/certificate"
   , "password": "password-for-keychain"
   }
-, "provisions":
-  [ "path/to.mobileprovision"
-  , "path/to/other.mobileprovision"
+, "products":
+  [ { "target": "TargetName"
+    , "configuration": "Debug"
+    , "provision": "path/to/mobileprovision"
+    }
   ]
+, "product":
+  { "target": "TargetName"
+  , "configuration": "Debug"
+  , "provision": "path/to/mobileprovision"
+  }
 , "project":
   { "path": "path/to/xcode-project"
   }
@@ -14,8 +21,6 @@
   , "output": "path/to/place/ipa"
   }
 , "build":
-  { "target": "target-name"
-  , "configuration": "Debug/Release"
-  , "output": "path/to/build/dir"
+  { "output": "path/to/build/dir"
   }
 }

@@ -23,6 +23,10 @@ if(!confPath) {
 
 conf = require(path.relative(__dirname, confPath))
 
+if(!conf.products) {
+	conf.products = [ conf.product ]
+}
+
 baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
@@ -57,15 +61,21 @@ function executeNextJob(err) {
 
 function parseProvisions(done) {
 	log('Parsing provisions')
-	provisions.parse(conf.provisions, function(err, parsedProvisions) {
-		conf.parsedProvisions = parsedProvisions
-		done(err)
+	var pool = fasync.pool()
+	pool.on('empty', done)
+
+	conf.products.forEach(function(product) {
+		provisions.parse(product.provision, pool.register(function(err, parsedProvision) {
+			product.parsedProvision = parsedProvision;
+		}))
 	})
 }
 
 function installProvisions(done) {
 	log('Installing provisions')
-	conf.installedProvisions = provisions.install(conf.parsedProvisions)
+	conf.products.forEach(function(product) {
+		product.installedProvision = provisions.install(product.parsedProvision)
+	})
 	done()
 }
 
@@ -100,38 +110,49 @@ function unlockKeychain(done) {
 
 function buildTarget(done) {
 	log('Building target')
-	utils.recurMkdirSync(conf.build.output)
-	exec(
-	  'xcodebuild'
-	, [ '-target'
-	  , conf.build.target
-	  , '-configuration'
-	  , conf.build.configuration
-	  , 'SYMROOT=' + path.resolve(conf.build.output)
-	  , 'clean'
-	  , 'build'
-	  ]
-	, { cwd: path.dirname(conf.project.path)
-	  , stdio: 'inherit'
-	  }
-	)
-		.on('exit', done)
+	var targets = conf.products.map(function(product) {
+		return function(done) {
+			utils.recurMkdirSync(conf.build.output)
+			exec(
+			  'xcodebuild'
+			, [ '-target'
+			  , product.target
+			  , '-configuration'
+			  , product.configuration
+			  , 'SYMROOT=' + path.resolve(conf.build.output)
+			  , 'clean'
+			  , 'build'
+			  ]
+			, { cwd: path.dirname(conf.project.path)
+			  , stdio: 'inherit'
+			  }
+			)
+				.on('error', done)
+				.on('exit', function() {
+					done()
+				})
+		}
+	})
+	fasync.waterfall(targets, done)
 }
 
 function createIpa(done) {
 	var pool = fasync.pool()
-	  , appDirectory =
-	    path.join(
-	      conf.build.output
-	    , conf.build.configuration + '-iphoneos'
-	    )
 	pool.on('empty', done)
 
 	log('Creating IPA files')
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	fs.readdir(appDirectory, function(err, files) { files.forEach(package) })
+	fs.readdirSync(conf.build.output).forEach(function(dir) {
+		var fullPath = path.join(conf.build.output, dir)
+		if(!fs.statSync(fullPath).isDirectory()) {
+			return
+		}
+		fs.readdirSync(fullPath).forEach(function(file) {
+			package(path.join(fullPath, file))
+		})
+	})
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
@@ -146,14 +167,14 @@ function createIpa(done) {
 		  , 'iphoneos'
 		  , 'PackageApplication'
 		  , '-v'
-		  , path.join(appDirectory, filename)
+		  , filename
 		  , '-o'
 		  , path.resolve(output)
 		  ]
 		, { stdio: 'inherit'
 		  }
 		)
-			.on('exit', done)
+			.on('exit', pool.register())
 	}
 }
 
@@ -171,6 +192,8 @@ function deploy(done) {
 
 function clean(done) {
 	log('Cleaning after ourselves')
-	provisions.clean(conf.installedProvisions)
+	conf.products.forEach(function(product) {
+		provisions.clean(product.installedProvision)
+	})
 	done()
 }
