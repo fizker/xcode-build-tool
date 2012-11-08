@@ -110,19 +110,27 @@ function unlockKeychain(done) {
 
 function buildTarget(done) {
 	log('Building target')
-	var targets = conf.products.map(function(product) {
+	var targets = conf.products.slice()
+	targets.unshift(
+		  { configuration: 'Release', clean: true }
+		, { configuration: 'Debug', clean: true }
+	)
+	targets = targets.map(function(product) {
 		return function(done) {
 			utils.recurMkdirSync(conf.build.output)
-			exec(
-			  'xcodebuild'
-			, [ '-target'
-			  , product.target
-			  , '-configuration'
+			var args =
+			[ '-configuration'
 			  , product.configuration
 			  , 'SYMROOT=' + path.resolve(conf.build.output)
-			  , 'clean'
-			  , 'build'
-			  ]
+			  , product.clean ? 'clean' : 'build'
+			]
+			if(product.target) {
+				args.unshift('-target', product.target)
+			}
+
+			exec(
+			  'xcodebuild'
+			, args
 			, { cwd: path.dirname(conf.project.path)
 			  , stdio: 'inherit'
 			  }
