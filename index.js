@@ -108,13 +108,20 @@ function unlockKeychain(done) {
 		.on('exit', done)
 }
 
+function getAllConfigurations() {
+	return Object.keys(conf.products.reduce(function(confs, product) {
+		confs[product.configuration] = true
+		return confs
+	}, {}))
+}
+
 function buildTarget(done) {
 	log('Building target')
 	var targets = conf.products.slice()
-	targets.unshift(
-		  { configuration: 'Release', clean: true }
-		, { configuration: 'Debug', clean: true }
-	)
+	  , configurations = getAllConfigurations()
+	configurations.forEach(function(conf) {
+		targets.unshift({ configuration: conf, clean: true })
+	})
 	targets = targets.map(function(product) {
 		return function(done) {
 			utils.recurMkdirSync(conf.build.output)
