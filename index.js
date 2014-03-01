@@ -148,7 +148,7 @@ function buildTarget() {
 			  }
 			)
 				.on('error', deferred.reject)
-				.on('exit', deferred.resolve)
+				.on('exit', deferred.makeNodeResolver())
 
 			return deferred.promise
 		}
@@ -217,6 +217,7 @@ function exec(command, args) {
 	var deferred = Q.defer()
 
 	child_process.spawn(command, args || [], { stdio: 'inherit' })
+		.on('error', deferred.reject)
 		.on('exit', deferred.makeNodeResolver())
 
 	return deferred.promise
