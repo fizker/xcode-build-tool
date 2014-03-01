@@ -121,7 +121,6 @@ function getAllConfigurations() {
 function buildTarget() {
 	log('Building target')
 
-	var deferred = Q.defer()
 	var targets = conf.products.slice()
 	var configurations = getAllConfigurations()
 
@@ -131,6 +130,8 @@ function buildTarget() {
 
 	targets = targets.map(function(product) {
 		return function(done) {
+			var deferred = Q.defer()
+
 			utils.recurMkdirSync(conf.build.output)
 			var args =
 			[ '-configuration'
@@ -149,16 +150,14 @@ function buildTarget() {
 			  , stdio: 'inherit'
 			  }
 			)
-				.on('error', done)
-				.on('exit', function() {
-					done()
-				})
+				.on('error', deferred.reject)
+				.on('exit', deferred.resolve)
+
+			return deferred.promise
 		}
 	})
 
-	fasync.waterfall(targets, deferred.makeNodeResolver())
-
-	return deferred.promise
+	return targets.reduce(Q.when, Q())
 }
 
 function createIpa() {
