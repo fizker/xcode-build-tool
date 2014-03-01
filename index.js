@@ -162,7 +162,7 @@ function createIpa() {
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	var promises = readdir(conf.build.output)
+	return readdir(conf.build.output)
 		.invoke('map', function(dir) {
 			var fullPath = path.join(conf.build.output, dir)
 			if(!fs.statSync(fullPath).isDirectory()) {
@@ -173,9 +173,9 @@ function createIpa() {
 				.invoke('map', function(file) {
 					return package(path.join(fullPath, file))
 				})
+				.all()
 		})
-
-	return Q.all(promises)
+		.all()
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
