@@ -10,7 +10,8 @@ Required
 --------
 
 -   A Mac (nothing else can run Xcode anyway).
--   Xcode (tested against Xcode 4.5 only).
+-   Xcode (I use this project myself against the newest stable Xcode. It might
+    work against other versions as wel).
 -   [Node.js](https://nodejs.org): The scripting-environment that the advances
     stuff is done in.
 -   [mobileprovisionParser](https://github.com/sharpland/mobileprovisionParser):
@@ -32,10 +33,9 @@ I like a static configuration-file more than a collection of scripts.
 Oh, and I am much more confident in javascript than bash-scripting, which is an
 even better reason :).
 
-
 Credits
 -------
 
 -   [mobileprovisionParser](https://github.com/sharpland/mobileprovisionParser):
-    The original test-version relies on this project. It should be installed in
+    The current version relies on this project. It should be installed in
     the path.
