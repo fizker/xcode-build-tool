@@ -28,6 +28,14 @@ if(!conf.products) {
 	conf.products = [ conf.product ]
 }
 
+conf.products = conf.products.map(function(product) {
+	if(typeof(product) == 'string') {
+		product = { target: product }
+	}
+
+	return product
+})
+
 baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
@@ -124,7 +132,7 @@ function unlockKeychain() {
 
 function getAllConfigurations() {
 	return Object.keys(conf.products.reduce(function(confs, product) {
-		confs[product.configuration] = true
+		confs[product.configuration || 'Debug'] = true
 		return confs
 	}, {}))
 }
