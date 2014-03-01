@@ -154,7 +154,7 @@ function buildTarget() {
 			utils.recurMkdirSync(conf.build.output)
 			var args =
 			[ '-configuration'
-			  , product.configuration
+			  , product.configuration || 'Debug'
 			  , 'SYMROOT=' + path.resolve(conf.build.output)
 			  , product.clean ? 'clean' : 'build'
 			]
