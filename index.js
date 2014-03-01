@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+var Q = require('q')
+var child_process = require('child_process')
 var path = require('path')
 
 var log = console.log.bind(console)
@@ -19,6 +21,16 @@ var conf = require(path.relative(__dirname, confPath))
 var build = require('./src/build')
 
 build(baseDir, conf)
+	.then(function() {
+		// Execute the install script
+		var deferred = Q.defer()
+
+		child_process.spawn(conf.deploy.script, [], { stdio: 'inherit' })
+			.on('error', deferred.reject)
+			.on('exit', deferred.makeNodeResolver())
+
+		return deferred.promise
+	})
 	.catch(function(err) {
 		if(typeof(err) == 'number') {
 			process.exit(err)

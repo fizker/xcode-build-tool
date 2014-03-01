@@ -32,7 +32,6 @@ module.exports = function build(baseDir, conf) {
 		, unlockKeychain
 		, buildTarget
 		, createIpa
-		, deploy
 		, clean
 		]
 		.reduce(Q.when, Q())
@@ -188,12 +187,6 @@ module.exports = function build(baseDir, conf) {
 			  ]
 			)
 		}
-	}
-
-	function deploy() {
-		log('Calling deploy script')
-
-		return exec(conf.deploy.script)
 	}
 
 	function clean() {
