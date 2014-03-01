@@ -5,9 +5,11 @@ module.exports =
 }
 
 var exec = require('child_process').execFile
-  , fs = require('fs')
-  , path = require('path')
-  , utils = require('./utils')
+var Q = require('q')
+var fs = require('fs')
+var unlink = Q.denodeify(fs.unlink)
+var path = require('path')
+var utils = require('./utils')
 
 function parse(provision, complete) {
 	var arr = []
@@ -27,7 +29,14 @@ function parse(provision, complete) {
 }
 
 function clean(provision) {
-	fs.unlinkSync(provision.installedPath)
+	return unlink(provision.installedPath)
+		.catch(function(err) {
+			// We don't care how the file disappeared, just that it is no longer there
+			if(err.message.indexOf('no such file or directory')) {
+				return
+			}
+			throw err
+		})
 }
 
 function install(provision) {

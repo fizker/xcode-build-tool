@@ -229,10 +229,25 @@ function deploy() {
 
 function clean() {
 	log('Cleaning after ourselves')
-	conf.products.forEach(function(product) {
-		provisions.clean(product.installedProvision)
-	})
-	return Q()
+
+	var promises = [ conf.project.teamProvision ]
+		.concat(
+			conf.products.map(function(product) {
+				return product.installedProvision
+			})
+		)
+		.filter(function(provision, idx, arr) {
+			// We don't care if there are no provision
+			if(!provision) return false
+
+			// We don't care for duplicates
+			if(~arr.slice(0, idx).indexOf(provision)) return false
+
+			return true
+		})
+		.map(provisions.clean)
+
+	return Q.all(promises)
 }
 
 function exec(command, args) {
