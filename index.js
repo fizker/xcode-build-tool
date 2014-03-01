@@ -46,7 +46,6 @@ process.chdir(baseDir)
 		if(typeof(err) == 'number') {
 			process.exit(err)
 		}
-		log(jobs[nextJob-1].name)
 		throw err
 	})
 	.done()
