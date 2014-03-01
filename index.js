@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 var Q = require('q')
-var exec = require('child_process').spawn
+var child_process = require('child_process')
 var path = require('path')
 var fs = require('fs')
 var readdir = Q.denodeify(fs.readdir)
@@ -75,38 +75,26 @@ function installProvisions() {
 function addKeychain() {
 	log('Adding keychain: %s', path.resolve(conf.keychain.path))
 
-	var deferred = Q.defer()
-	exec(
+	return exec(
 	  'security'
 	, [ 'list-keychains'
 	  , '-s'
 	  , path.resolve(conf.keychain.path)
 	  ]
-	, { stdio: 'inherit'
-	  }
 	)
-		.on('exit', deferred.makeNodeResolver())
-
-	return deferred.promise
 }
 
 function unlockKeychain() {
 	log('Unlocking keychain')
 
-	var deferred = Q.defer()
-	exec(
+	return exec(
 	  'security'
 	, [ 'unlock-keychain'
 	  , '-p'
 	  , conf.keychain.password
 	  , path.resolve(conf.keychain.path)
 	  ]
-	, { stdio: 'inherit'
-	  }
 	)
-		.on('exit', deferred.makeNodeResolver())
-
-	return deferred.promise
 }
 
 function getAllConfigurations() {
@@ -141,7 +129,7 @@ function buildTarget() {
 				args.unshift('-target', product.target)
 			}
 
-			exec(
+			child_process.spawn(
 			  'xcodebuild'
 			, args
 			, { cwd: path.dirname(conf.project.path)
@@ -183,11 +171,10 @@ function createIpa() {
 			return Q()
 		}
 
-		var deferred = Q.defer()
 		var ipaName = path.basename(filename) + '.ipa'
 		var output = path.join(conf.deploy.output, ipaName)
 
-		exec(
+		return exec(
 		  'xcrun'
 		, [ '-sdk'
 		  , 'iphoneos'
@@ -197,28 +184,14 @@ function createIpa() {
 		  , '-o'
 		  , path.resolve(output)
 		  ]
-		, { stdio: 'inherit'
-		  }
 		)
-			.on('exit', deferred.makeNodeResolver())
-		return deferred.promise
 	}
 }
 
 function deploy() {
 	log('Calling deploy script')
 
-	var deferred = Q.defer()
-	exec(
-	  conf.deploy.script
-	, [
-	  ]
-	, { stdio: 'inherit'
-	  }
-	)
-		.on('exit', deferred.makeNodeResolver())
-
-	return deferred.promise
+	return exec(conf.deploy.script)
 }
 
 function clean() {
@@ -227,4 +200,13 @@ function clean() {
 		provisions.clean(product.installedProvision)
 	})
 	return Q()
+}
+
+function exec(command, args) {
+	var deferred = Q.defer()
+
+	child_process.spawn(command, args || [], { stdio: 'inherit' })
+		.on('exit', deferred.makeNodeResolver())
+
+	return deferred.promise
 }
