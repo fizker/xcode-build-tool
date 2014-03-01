@@ -14,9 +14,6 @@ Required
     work against other versions as wel).
 -   [Node.js](https://nodejs.org): The scripting-environment that the advances
     stuff is done in.
--   [mobileprovisionParser](https://github.com/sharpland/mobileprovisionParser):
-    Used for parsing mobile-provisions for essential data. It should be
-    installed in the path.
 
 
 Why use Node.js and not bash?
@@ -36,6 +33,6 @@ even better reason :).
 Credits
 -------
 
--   [mobileprovisionParser](https://github.com/sharpland/mobileprovisionParser):
-    The current version relies on this project. It should be installed in
-    the path.
+-   [mobileprovision-read](https://github.com/0xc010d/mobileprovision-read):
+    The current version relies on this project. It has been bundled with this
+    project for ease of installation.

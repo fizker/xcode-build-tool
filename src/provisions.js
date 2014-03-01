@@ -15,17 +15,19 @@ function parse(provision, complete) {
 
 	var arr = []
 
-	exec(
-	  'mobileprovisionParser'
-	, [ '-f', provision, '-o', 'uuid' ]
-	)
+	var cmd = path.join(__dirname, '../mobileprovision-read')
+	var args = [ '-f', provision, '-o', 'UUID' ]
+
+	var child = exec(cmd, args, deferred.makeNodeResolver())
 		.on('error', deferred.reject)
-		.stdout.on('data', function(data) {
+
+	return deferred.promise
+		.spread(function(data, stderr) {
 			data =
 			{ path: provision
 			, uuid: data.toString().trim()
 			}
-			deferred.resolve(data)
+			return data
 		})
 
 	return deferred.promise
