@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
 var exec = require('child_process').spawn
-  , path = require('path')
-  , fs = require('fs')
-  , fasync = require('fasync')
+var path = require('path')
+var fs = require('fs')
+var fasync = require('fasync')
 
-  , utils = require('./src/utils')
-  , provisions = require('./src/provisions')
+var utils = require('./src/utils')
+var provisions = require('./src/provisions')
 
-  , baseDir
+var baseDir
 
-  , confPath = process.argv[2]
-  , conf
+var confPath = process.argv[2]
+var conf
 
-  , log = console.log.bind(console)
+var log = console.log.bind(console)
 
 if(!confPath) {
 	var executable = process.env.BUILD_EXEC || path.basename(process.argv[1])
