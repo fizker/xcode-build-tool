@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+var Q = require('q')
 var exec = require('child_process').spawn
 var path = require('path')
 var fs = require('fs')
-var fasync = require('fasync')
+var readdir = Q.denodeify(fs.readdir)
 
 var utils = require('./src/utils')
 var provisions = require('./src/provisions')
@@ -31,56 +32,51 @@ baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
 // The list of jobs, in the order that they execute
-var jobs =
-    [ parseProvisions
-    , installProvisions
-    , addKeychain
-    , unlockKeychain
-    , buildTarget
-    , createIpa
-    , deploy
-    , clean
-    ]
-  , nextJob = 0
-
-executeNextJob()
-
-function executeNextJob(err) {
-	if(err) {
+;[ parseProvisions
+, installProvisions
+, addKeychain
+, unlockKeychain
+, buildTarget
+, createIpa
+, deploy
+, clean
+]
+	.reduce(Q.when, Q())
+	.catch(function(err) {
 		if(typeof(err) == 'number') {
 			process.exit(err)
 		}
 		log(jobs[nextJob-1].name)
 		throw err
-	}
-
-	if(jobs.length > nextJob) {
-		jobs[nextJob++](executeNextJob)
-	}
-}
-
-function parseProvisions(done) {
-	log('Parsing provisions')
-	var pool = fasync.pool()
-	pool.on('empty', done)
-
-	conf.products.forEach(function(product) {
-		provisions.parse(product.provision, pool.register(function(err, parsedProvision) {
-			product.parsedProvision = parsedProvision;
-		}))
 	})
+	.done()
+
+function parseProvisions() {
+	log('Parsing provisions')
+
+	return Q.all(conf.products.map(function(product) {
+		var deferred = Q.defer()
+
+		provisions.parse(product.provision, deferred.makeNodeResolver())
+
+		return deferred.promise.then(function(parsedProvision) {
+			product.parsedProvision = parsedProvision;
+		})
+	}))
 }
 
-function installProvisions(done) {
+function installProvisions() {
 	log('Installing provisions')
 	conf.products.forEach(function(product) {
 		product.installedProvision = provisions.install(product.parsedProvision)
 	})
-	done()
+	return Q()
 }
 
-function addKeychain(done) {
+function addKeychain() {
 	log('Adding keychain: %s', path.resolve(conf.keychain.path))
+
+	var deferred = Q.defer()
 	exec(
 	  'security'
 	, [ 'list-keychains'
@@ -90,11 +86,15 @@ function addKeychain(done) {
 	, { stdio: 'inherit'
 	  }
 	)
-		.on('exit', done)
+		.on('exit', deferred.makeNodeResolver())
+
+	return deferred.promise
 }
 
-function unlockKeychain(done) {
+function unlockKeychain() {
 	log('Unlocking keychain')
+
+	var deferred = Q.defer()
 	exec(
 	  'security'
 	, [ 'unlock-keychain'
@@ -105,7 +105,9 @@ function unlockKeychain(done) {
 	, { stdio: 'inherit'
 	  }
 	)
-		.on('exit', done)
+		.on('exit', deferred.makeNodeResolver())
+
+	return deferred.promise
 }
 
 function getAllConfigurations() {
@@ -115,15 +117,20 @@ function getAllConfigurations() {
 	}, {}))
 }
 
-function buildTarget(done) {
+function buildTarget() {
 	log('Building target')
+
 	var targets = conf.products.slice()
-	  , configurations = getAllConfigurations()
+	var configurations = getAllConfigurations()
+
 	configurations.forEach(function(conf) {
 		targets.unshift({ configuration: conf, clean: true })
 	})
+
 	targets = targets.map(function(product) {
 		return function(done) {
+			var deferred = Q.defer()
+
 			utils.recurMkdirSync(conf.build.output)
 			var args =
 			[ '-configuration'
@@ -142,39 +149,44 @@ function buildTarget(done) {
 			  , stdio: 'inherit'
 			  }
 			)
-				.on('error', done)
-				.on('exit', function() {
-					done()
-				})
+				.on('error', deferred.reject)
+				.on('exit', deferred.resolve)
+
+			return deferred.promise
 		}
 	})
-	fasync.waterfall(targets, done)
+
+	return targets.reduce(Q.when, Q())
 }
 
-function createIpa(done) {
-	var pool = fasync.pool()
-	pool.on('empty', done)
-
+function createIpa() {
 	log('Creating IPA files')
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	fs.readdirSync(conf.build.output).forEach(function(dir) {
-		var fullPath = path.join(conf.build.output, dir)
-		if(!fs.statSync(fullPath).isDirectory()) {
-			return
-		}
-		fs.readdirSync(fullPath).forEach(function(file) {
-			package(path.join(fullPath, file))
+	var promises = readdir(conf.build.output)
+		.invoke('map', function(dir) {
+			var fullPath = path.join(conf.build.output, dir)
+			if(!fs.statSync(fullPath).isDirectory()) {
+				return
+			}
+
+			return readdir(fullPath)
+				.invoke('map', function(file) {
+					return package(path.join(fullPath, file))
+				})
 		})
-	})
+
+	return Q.all(promises)
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
-			return
+			return Q()
 		}
+
+		var deferred = Q.defer()
 		var ipaName = path.basename(filename) + '.ipa'
-		  , output = path.join(conf.deploy.output, ipaName)
+		var output = path.join(conf.deploy.output, ipaName)
 
 		exec(
 		  'xcrun'
@@ -189,12 +201,15 @@ function createIpa(done) {
 		, { stdio: 'inherit'
 		  }
 		)
-			.on('exit', pool.register())
+			.on('exit', deferred.makeNodeResolver())
+		return deferred.promise
 	}
 }
 
-function deploy(done) {
+function deploy() {
 	log('Calling deploy script')
+
+	var deferred = Q.defer()
 	exec(
 	  conf.deploy.script
 	, [
@@ -202,13 +217,15 @@ function deploy(done) {
 	, { stdio: 'inherit'
 	  }
 	)
-		.on('exit', done)
+		.on('exit', deferred.makeNodeResolver())
+
+	return deferred.promise
 }
 
-function clean(done) {
+function clean() {
 	log('Cleaning after ourselves')
 	conf.products.forEach(function(product) {
 		provisions.clean(product.installedProvision)
 	})
-	done()
+	return Q()
 }
