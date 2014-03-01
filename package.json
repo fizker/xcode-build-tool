@@ -4,6 +4,7 @@
 , "main": "index.js"
 , "dependencies":
   { "fasync": "1.0.0"
+  , "q": "1.0 - 1.x"
   }
 , "devDependencies":
   {

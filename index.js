@@ -3,6 +3,7 @@
 var exec = require('child_process').spawn
 var path = require('path')
 var fs = require('fs')
+var Q = require('q')
 var fasync = require('fasync')
 
 var utils = require('./src/utils')
@@ -55,7 +56,9 @@ function executeNextJob(err) {
 	}
 
 	if(jobs.length > nextJob) {
-		jobs[nextJob++](executeNextJob)
+		var job = jobs[nextJob++]
+		if(job.length) job(executeNextJob)
+		else job().nodeify(executeNextJob)
 	}
 }
 
@@ -205,10 +208,10 @@ function deploy(done) {
 		.on('exit', done)
 }
 
-function clean(done) {
+function clean() {
 	log('Cleaning after ourselves')
 	conf.products.forEach(function(product) {
 		provisions.clean(product.installedProvision)
 	})
-	done()
+	return Q()
 }
