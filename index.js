@@ -5,7 +5,6 @@ var exec = require('child_process').spawn
 var path = require('path')
 var fs = require('fs')
 var readdir = Q.denodeify(fs.readdir)
-var fasync = require('fasync')
 
 var utils = require('./src/utils')
 var provisions = require('./src/provisions')
