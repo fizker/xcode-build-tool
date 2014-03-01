@@ -1,28 +1,15 @@
-#!/usr/bin/env node
-
 var Q = require('q')
 var child_process = require('child_process')
 var path = require('path')
 var fs = require('fs')
 var readdir = Q.denodeify(fs.readdir)
 
-var utils = require('./src/utils')
-var provisions = require('./src/provisions')
-
-var baseDir
-
-var confPath = process.argv[2]
-var conf
+var utils = require('./utils')
+var provisions = require('./provisions')
 
 var log = console.log.bind(console)
 
-if(!confPath) {
-	var executable = process.env.BUILD_EXEC || path.basename(process.argv[1])
-	console.log('Use as: %s path/to/config.json', executable)
-	process.exit(1)
-}
-
-conf = require(path.relative(__dirname, confPath))
+module.exports = function build(baseDir, conf) {
 
 if(!conf.products) {
 	conf.products = [ conf.product ]
@@ -36,27 +23,19 @@ conf.products = conf.products.map(function(product) {
 	return product
 })
 
-baseDir = path.dirname(confPath)
 process.chdir(baseDir)
 
 // The list of jobs, in the order that they execute
-;[ parseProvisions
-, installProvisions
-, addKeychain
-, unlockKeychain
-, buildTarget
-, createIpa
-, deploy
-, clean
-]
+return [ parseProvisions
+	, installProvisions
+	, addKeychain
+	, unlockKeychain
+	, buildTarget
+	, createIpa
+	, deploy
+	, clean
+	]
 	.reduce(Q.when, Q())
-	.catch(function(err) {
-		if(typeof(err) == 'number') {
-			process.exit(err)
-		}
-		throw err
-	})
-	.done()
 
 function parseProvisions() {
 	log('Parsing provisions')
@@ -248,4 +227,6 @@ function exec(command, args) {
 		.on('exit', deferred.makeNodeResolver())
 
 	return deferred.promise
+}
+
 }
