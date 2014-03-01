@@ -75,13 +75,24 @@ function installProvisions() {
 function addKeychain() {
 	log('Adding keychain: %s', path.resolve(conf.keychain.path))
 
-	return exec(
-	  'security'
-	, [ 'list-keychains'
-	  , '-s'
-	  , path.resolve(conf.keychain.path)
-	  ]
-	)
+	return Q.denodeify(child_process.exec)('security list-keychains -d user')
+		.spread(function(stdout, stderr) {
+			return stdout
+				.trim()
+				.split('\n')
+				.map(function(line) {
+					return line.trim().slice(1, -1)
+				})
+		})
+		.then(function(keychains) {
+			keychains.unshift(path.resolve(conf.keychain.path))
+			keychains = keychains.filter(function uniq(obj, idx, arr) {
+				return !~arr.slice(0, idx).indexOf(obj)
+			})
+			var args = [ 'list-keychains', '-s' ].concat(keychains)
+
+			return exec('security', args)
+		})
 }
 
 function unlockKeychain() {
