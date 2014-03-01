@@ -6,26 +6,29 @@ module.exports =
 
 var exec = require('child_process').execFile
 var Q = require('q')
-var fs = require('fs')
-var unlink = Q.denodeify(fs.unlink)
+var unlink = Q.denodeify(require('fs').unlink)
 var path = require('path')
 var utils = require('./utils')
 
 function parse(provision, complete) {
+	var deferred = Q.defer()
+
 	var arr = []
 
 	exec(
 	  'mobileprovisionParser'
 	, [ '-f', provision, '-o', 'uuid' ]
 	)
-		.on('error', complete)
+		.on('error', deferred.reject)
 		.stdout.on('data', function(data) {
 			data =
 			{ path: provision
 			, uuid: data.toString().trim()
 			}
-			complete(null, data)
+			deferred.resolve(data)
 		})
+
+	return deferred.promise
 }
 
 function clean(provision) {

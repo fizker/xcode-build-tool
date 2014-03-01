@@ -61,25 +61,15 @@ process.chdir(baseDir)
 function parseProvisions() {
 	log('Parsing provisions')
 
-	var deferred = Q.defer()
-
-	if(conf.project.teamProvision) {
-		provisions.parse(conf.project.teamProvision, deferred.makeNodeResolver())
-	} else {
-		deferred.resolve()
-	}
-
-	return deferred.promise.then(function(teamProvision) {
+	return (conf.project.teamProvision
+		? provisions.parse(conf.project.teamProvision)
+		: Q()
+	).then(function(teamProvision) {
 		return Q.all(conf.products.map(function(product) {
-			var deferred = Q.defer()
-
-			if(product.provision) {
-				provisions.parse(product.provision, deferred.makeNodeResolver())
-			} else {
-				deferred.resolve(teamProvision)
-			}
-
-			return deferred.promise.then(function(parsedProvision) {
+			return (product.provision
+				? provisions.parse(product.provision)
+				: Q(teamProvision)
+			).then(function(parsedProvision) {
 				product.parsedProvision = parsedProvision;
 			})
 		}))
