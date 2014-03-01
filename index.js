@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+var Q = require('q')
 var exec = require('child_process').spawn
 var path = require('path')
 var fs = require('fs')
-var Q = require('q')
+var readdir = Q.denodeify(fs.readdir)
 var fasync = require('fasync')
 
 var utils = require('./src/utils')
@@ -161,32 +162,33 @@ function buildTarget() {
 }
 
 function createIpa() {
-	var deferred = Q.defer()
-	var pool = fasync.pool()
-	pool.on('empty', deferred.makeNodeResolver())
-
 	log('Creating IPA files')
 
 	utils.recurMkdirSync(path.resolve(conf.deploy.output))
 
-	fs.readdirSync(conf.build.output).forEach(function(dir) {
-		var fullPath = path.join(conf.build.output, dir)
-		if(!fs.statSync(fullPath).isDirectory()) {
-			return
-		}
-		fs.readdirSync(fullPath).forEach(function(file) {
-			package(path.join(fullPath, file))
-		})
-	})
+	var promises = readdir(conf.build.output)
+		.invoke('map', function(dir) {
+			var fullPath = path.join(conf.build.output, dir)
+			if(!fs.statSync(fullPath).isDirectory()) {
+				return
+			}
 
-	return deferred.promise
+			return readdir(fullPath)
+				.invoke('map', function(file) {
+					return package(path.join(fullPath, file))
+				})
+		})
+
+	return Q.all(promises)
 
 	function package(filename) {
 		if(!/\.app$/.test(filename)) {
-			return
+			return Q()
 		}
+
+		var deferred = Q.defer()
 		var ipaName = path.basename(filename) + '.ipa'
-		  , output = path.join(conf.deploy.output, ipaName)
+		var output = path.join(conf.deploy.output, ipaName)
 
 		exec(
 		  'xcrun'
@@ -201,7 +203,8 @@ function createIpa() {
 		, { stdio: 'inherit'
 		  }
 		)
-			.on('exit', pool.register())
+			.on('exit', deferred.makeNodeResolver())
+		return deferred.promise
 	}
 }
 
