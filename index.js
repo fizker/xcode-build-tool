@@ -6,6 +6,15 @@ var path = require('path')
 
 var log = console.log.bind(console)
 
+var build = require('./src/build')
+
+if(require.main !== module) {
+	module.exports = {
+		build: build,
+	}
+	return
+}
+
 var confPath = process.argv[2]
 
 if(!confPath) {
@@ -17,8 +26,6 @@ if(!confPath) {
 var baseDir = path.dirname(confPath)
 
 var conf = require(path.relative(__dirname, confPath))
-
-var build = require('./src/build')
 
 build(baseDir, conf)
 	.then(function() {
