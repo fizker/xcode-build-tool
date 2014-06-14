@@ -11,7 +11,7 @@ Required
 
 -   A Mac (nothing else can run Xcode anyway).
 -   Xcode (I use this project myself against the newest stable Xcode. It might
-    work against other versions as wel).
+    work against other versions as well).
 -   [Node.js](https://nodejs.org): The scripting-environment that the advances
     stuff is done in.
 

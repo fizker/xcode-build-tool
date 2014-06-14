@@ -1,16 +1,16 @@
-{ "name": "xcode"
+{ "name": "xcode-build-tool"
 , "version": "0.1.0"
 , "description": "Xcode build tool"
 , "main": "index.js"
 , "dependencies":
-  { "q": "1.0 - 1.x"
+  { "q": "^1.0.1"
   }
 , "devDependencies":
   {
   }
 , "repository":
   { "type": "git"
-  , "url": "https://github.com/fizker/scripts"
+  , "url": "https://github.com/fizker/xcode-build-tools"
   }
 , "engines":
   { "node": ">=0.10"
