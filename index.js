@@ -29,12 +29,15 @@ var conf = require(path.relative(__dirname, confPath))
 
 var result = build(baseDir, conf)
 
+// Setting up the stdout pipe for detailed text
 result.pipe(process.stdout)
 
+// Outputting the messages when they arrive
 result.on('message', function(msg) {
 	console.log('%s/%s: %s', msg.current, msg.total, msg.message)
 })
 
+// Hooking up to the promise for finishing up and catching errors
 Q(result)
 	.then(function() {
 		// Execute the install script

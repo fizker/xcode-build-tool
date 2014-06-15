@@ -16,6 +16,47 @@ Required
     stuff is done in.
 
 
+How to use in node.js
+---------------------
+
+Start by installing it:
+
+    npm install xcode-build-tool
+
+Then add the following code:
+
+    var xcode = require('xcode-build-tool')
+    var buildResults = xcode.build(codeDir, config)
+
+The `buildResults` object is a combination of a stream and a promise.
+
+This means that you can interact with it in several ways. It emits several
+events:
+
+-   message: A high-level message sent when the next internal task is started.
+
+    The message is an object of the following structure:
+
+        { current: 5 // The current task number
+        , total: 7 // The total number of tasks
+        , message: 'Building target' // A line describing what is happening
+        }
+
+-   end: Sent when everything is completed.
+-   data: Sent whenever something happens on one of the underlying stdout
+    streams.
+
+Being a `stream`, it also have a pipe-method. This is hooked up to the stdout of
+the underlying processes like `xcodebuild`.
+
+It also have a `.then` and `.catch` method so it is compatible with the
+`Promise` spec. The `promise` is resolved slightly after the `end` event is
+emitted.
+
+See [index.js](https://github.com/fizker/xcode-build-tool/blob/master/index.js)
+for an example of how to interact with the result object.
+
+
 Why use Node.js and not bash?
 -----------------------------
 
