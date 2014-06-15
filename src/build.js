@@ -61,7 +61,7 @@ module.exports = function build(baseDir, conf) {
 		.then(function() {
 			result.push(null)
 		})
-		.done()
+		.then(allTasks.resolve, allTasks.reject)
 
 	var result = new stream.Readable({ objectMode: false })
 	result.then = allTasks.promise.then.bind(allTasks.promise)
