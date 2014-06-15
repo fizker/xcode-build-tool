@@ -90,10 +90,12 @@ module.exports = function build(baseDir, conf) {
 
 	function installProvisions() {
 		log('Installing provisions')
-		conf.products.forEach(function(product) {
-			product.installedProvision = provisions.install(product.parsedProvision)
-		})
-		return Q()
+		return Q.all(conf.products.map(function(product) {
+			return provisions.install(product.parsedProvision)
+				.then(function(provision) {
+					product.installedProvision = provision
+				})
+		}))
 	}
 
 	function addKeychain() {
@@ -150,31 +152,33 @@ module.exports = function build(baseDir, conf) {
 		})
 
 		targets = targets.map(function(product) {
-			return function(done) {
-				var deferred = Q.defer()
+			return function() {
+				return utils.recurMkdir(conf.build.output)
+				.then(function() {
+					var deferred = Q.defer()
 
-				utils.recurMkdirSync(conf.build.output)
-				var args =
-				[ '-configuration'
-				  , product.configuration || 'Debug'
-				  , 'SYMROOT=' + path.resolve(conf.build.output)
-				  , product.clean ? 'clean' : 'build'
-				]
-				if(product.target) {
-					args.unshift('-target', product.target)
-				}
+					var args =
+					[ '-configuration'
+					  , product.configuration || 'Debug'
+					  , 'SYMROOT=' + path.resolve(conf.build.output)
+					  , product.clean ? 'clean' : 'build'
+					]
+					if(product.target) {
+						args.unshift('-target', product.target)
+					}
 
-				setupStdout(child_process.spawn(
-				  'xcodebuild'
-				, args
-				, { cwd: path.dirname(conf.project.path)
-				  , stdio: 'pipe'
-				  }
-				))
-					.on('error', deferred.reject)
-					.on('exit', deferred.makeNodeResolver())
+					setupStdout(child_process.spawn(
+					  'xcodebuild'
+					, args
+					, { cwd: path.dirname(conf.project.path)
+					  , stdio: 'pipe'
+					  }
+					))
+						.on('error', deferred.reject)
+						.on('exit', deferred.makeNodeResolver())
 
-				return deferred.promise
+					return deferred.promise
+				})
 			}
 		})
 
@@ -184,9 +188,9 @@ module.exports = function build(baseDir, conf) {
 	function createIpa() {
 		log('Creating IPA files')
 
-		utils.recurMkdirSync(path.resolve(conf.deploy.output))
-
-		return readdir(conf.build.output)
+		return utils.recurMkdir(path.resolve(conf.deploy.output))
+		.then(function() {
+			return readdir(conf.build.output)
 			.invoke('map', function(dir) {
 				var fullPath = path.join(conf.build.output, dir)
 				if(!fs.statSync(fullPath).isDirectory()) {
@@ -200,6 +204,7 @@ module.exports = function build(baseDir, conf) {
 					.all()
 			})
 			.all()
+		})
 
 		function package(filename) {
 			if(!/\.app$/.test(filename)) {

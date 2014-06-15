@@ -1,7 +1,7 @@
-module.exports =
-{ parse: parse
-, clean: clean
-, install: install
+module.exports = {
+	parse: parse,
+	clean: clean,
+	install: install,
 }
 
 var exec = require('child_process').execFile
@@ -45,15 +45,14 @@ function clean(provision) {
 }
 
 function install(provision) {
-	var installPath = path.join(
-	      process.env.HOME
-	    , 'Library/MobileDevice/Provisioning Profiles'
-	    )
-	utils.recurMkdirSync(installPath)
-	provision.installedPath = path.join(
-	  installPath
-	, provision.uuid + path.extname(provision.path)
-	)
-	utils.copy(provision.path, provision.installedPath)
-	return provision
+	var installPath = path.join(process.env.HOME,
+		'Library/MobileDevice/Provisioning Profiles')
+
+	return utils.recurMkdir(installPath)
+		.then(function() {
+			provision.installedPath = path.join(installPath,
+				provision.uuid + path.extname(provision.path))
+			return utils.copy(provision.path, provision.installedPath)
+		})
+		.thenResolve(provision)
 }
