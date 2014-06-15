@@ -5,6 +5,7 @@ var fs = require('fs')
 var readdir = Q.denodeify(fs.readdir)
 var through = require('through')
 var format = require('util').format
+var stream = require('readable-stream')
 
 var utils = require('./utils')
 var provisions = require('./provisions')
@@ -30,11 +31,12 @@ module.exports = function build(baseDir, conf) {
 	var currentTask = 0
 	function log(msg) {
 		msg = format.apply(null, arguments)
-		allTasks.notify({
+		var obj = {
 			current: currentTask,
 			total: tasks.length,
 			message: msg,
-		})
+		}
+		result.emit('message', obj)
 	}
 
 	// The list of jobs, in the order that they execute
@@ -55,9 +57,18 @@ module.exports = function build(baseDir, conf) {
 				currentTask++
 			})
 			.then(task)
-	}, Q()).done()
+	}, Q())
+		.then(function() {
+			result.push(null)
+		})
+		.done()
 
-	return allTasks.promise
+	var result = new stream.Readable({ objectMode: false })
+	result.then = allTasks.promise.then.bind(allTasks.promise)
+	result.catch = allTasks.promise.catch.bind(allTasks.promise)
+	result._read = function() {}
+
+	return result
 
 	function parseProvisions() {
 		log('Parsing provisions')
@@ -247,11 +258,13 @@ module.exports = function build(baseDir, conf) {
 
 	function setupStdout(childProcess) {
 		childProcess.stdout.pipe(through(function(data) {
-			log(data.toString())
+			result.push(data)
 		}))
+		/*
 		childProcess.stderr.pipe(through(function(data) {
 			log('Error: ' + data.toString())
 		}))
+		*/
 		return childProcess
 	}
 

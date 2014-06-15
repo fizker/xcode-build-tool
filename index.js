@@ -27,10 +27,15 @@ var baseDir = path.dirname(confPath)
 
 var conf = require(path.relative(__dirname, confPath))
 
-build(baseDir, conf)
-	.progress(function(msg) {
-		console.log('%s/%s: %s', msg.current, msg.total, msg.message)
-	})
+var result = build(baseDir, conf)
+
+result.pipe(process.stdout)
+
+result.on('message', function(msg) {
+	console.log('%s/%s: %s', msg.current, msg.total, msg.message)
+})
+
+Q(result)
 	.then(function() {
 		// Execute the install script
 		var deferred = Q.defer()
