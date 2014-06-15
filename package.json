@@ -4,6 +4,7 @@
 , "main": "index.js"
 , "dependencies":
   { "q": "^1.0.1"
+  , "through": "^2.3.4"
   }
 , "devDependencies":
   {

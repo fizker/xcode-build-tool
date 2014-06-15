@@ -3,6 +3,8 @@ var child_process = require('child_process')
 var path = require('path')
 var fs = require('fs')
 var readdir = Q.denodeify(fs.readdir)
+var through = require('through')
+var format = require('util').format
 
 var utils = require('./utils')
 var provisions = require('./provisions')
@@ -25,16 +27,37 @@ module.exports = function build(baseDir, conf) {
 
 	process.chdir(baseDir)
 
+	var currentTask = 0
+	function log(msg) {
+		msg = format.apply(null, arguments)
+		allTasks.notify({
+			current: currentTask,
+			total: tasks.length,
+			message: msg,
+		})
+	}
+
 	// The list of jobs, in the order that they execute
-	return [ parseProvisions
-		, installProvisions
-		, addKeychain
-		, unlockKeychain
-		, buildTarget
-		, createIpa
-		, clean
-		]
-		.reduce(Q.when, Q())
+	var tasks = [
+		parseProvisions,
+		installProvisions,
+		addKeychain,
+		unlockKeychain,
+		buildTarget,
+		createIpa,
+		clean,
+	]
+	var allTasks = Q.defer()
+
+	tasks.reduce(function(promise, task) {
+		return promise
+			.then(function() {
+				currentTask++
+			})
+			.then(task)
+	}, Q()).done()
+
+	return allTasks.promise
 
 	function parseProvisions() {
 		log('Parsing provisions')
@@ -130,13 +153,13 @@ module.exports = function build(baseDir, conf) {
 					args.unshift('-target', product.target)
 				}
 
-				child_process.spawn(
+				setupStdout(child_process.spawn(
 				  'xcodebuild'
 				, args
 				, { cwd: path.dirname(conf.project.path)
-				  , stdio: 'inherit'
+				  , stdio: 'pipe'
 				  }
-				)
+				))
 					.on('error', deferred.reject)
 					.on('exit', deferred.makeNodeResolver())
 
@@ -215,11 +238,21 @@ module.exports = function build(baseDir, conf) {
 	function exec(command, args) {
 		var deferred = Q.defer()
 
-		child_process.spawn(command, args || [], { stdio: 'inherit' })
+		setupStdout(child_process.spawn(command, args || [], { stdio: 'pipe' }))
 			.on('error', deferred.reject)
 			.on('exit', deferred.makeNodeResolver())
 
 		return deferred.promise
+	}
+
+	function setupStdout(childProcess) {
+		childProcess.stdout.pipe(through(function(data) {
+			log(data.toString())
+		}))
+		childProcess.stderr.pipe(through(function(data) {
+			log('Error: ' + data.toString())
+		}))
+		return childProcess
 	}
 
 }
