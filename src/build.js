@@ -13,7 +13,6 @@ var provisions = require('./provisions')
 var log = console.log.bind(console)
 
 module.exports = function build(baseDir, conf) {
-
 	if(!conf.products) {
 		conf.products = [ conf.product ]
 	}
@@ -57,7 +56,9 @@ module.exports = function build(baseDir, conf) {
 				currentTask++
 			})
 			.then(task)
-	}, Q())
+	}, Q().then(function() {
+		result.emit('totalTasks', tasks.length)
+	}))
 		.then(function() {
 			result.push(null)
 		})

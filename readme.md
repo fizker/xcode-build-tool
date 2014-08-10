@@ -33,6 +33,9 @@ The `buildResults` object is a combination of a stream and a promise.
 This means that you can interact with it in several ways. It emits several
 events:
 
+-   totalTasks: The number of tasks. This will be the same number as the
+    `total` parameter of the message. This will be sent before the first
+    task starts.
 -   message: A high-level message sent when the next internal task is started.
 
     The message is an object of the following structure:
