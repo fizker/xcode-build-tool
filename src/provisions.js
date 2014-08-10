@@ -37,6 +37,7 @@ function clean(provision) {
 	return unlink(provision.installedPath)
 		.catch(function(err) {
 			// We don't care how the file disappeared, just that it is no longer there
+			if(err.code == 'ENOENT') return
 			if(err.message.indexOf('no such file or directory')) {
 				return
 			}
