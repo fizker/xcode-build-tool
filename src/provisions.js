@@ -35,6 +35,10 @@ function parse(provision, complete) {
 }
 
 function clean(provision) {
+	if(!provision.installedPath) {
+		console.trace('no isntall path', provision)
+		return
+	}
 	return unlink(provision.installedPath)
 		.catch(function(err) {
 			// We don't care how the file disappeared, just that it is no longer there
