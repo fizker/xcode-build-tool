@@ -6,6 +6,7 @@ var readdir = Q.denodeify(fs.readdir)
 var through = require('through')
 var format = require('util').format
 var stream = require('readable-stream')
+var mkdirp = Q.denodeify(require('mkdirp'))
 
 var utils = require('./utils')
 var provisions = require('./provisions')
@@ -154,7 +155,7 @@ module.exports = function build(baseDir, conf) {
 
 		targets = targets.map(function(product) {
 			return function() {
-				return utils.recurMkdir(conf.build.output)
+				return mkdirp(conf.build.output)
 				.then(function() {
 					var deferred = Q.defer()
 
@@ -189,7 +190,7 @@ module.exports = function build(baseDir, conf) {
 	function createIpa() {
 		log('Creating IPA files')
 
-		return utils.recurMkdir(path.resolve(conf.deploy.output))
+		return mkdirp(path.resolve(conf.deploy.output))
 		.then(function() {
 			return readdir(conf.build.output)
 			.invoke('map', function(dir) {

@@ -8,6 +8,7 @@ var exec = require('child_process').execFile
 var Q = require('q')
 var unlink = Q.denodeify(require('fs').unlink)
 var path = require('path')
+var mkdirp = Q.denodeify(require('mkdirp'))
 var utils = require('./utils')
 
 function parse(provision, complete) {
@@ -49,7 +50,7 @@ function install(provision) {
 	var installPath = path.join(process.env.HOME,
 		'Library/MobileDevice/Provisioning Profiles')
 
-	return utils.recurMkdir(installPath)
+	return mkdirp(installPath)
 		.then(function() {
 			provision.installedPath = path.join(installPath,
 				provision.uuid + path.extname(provision.path))
