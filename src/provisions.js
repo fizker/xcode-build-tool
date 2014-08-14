@@ -36,7 +36,6 @@ function parse(provision, complete) {
 
 function clean(provision) {
 	if(!provision.installedPath) {
-		console.trace('no isntall path', provision)
 		return
 	}
 	return unlink(provision.installedPath)
