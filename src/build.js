@@ -7,6 +7,7 @@ var through = require('through')
 var format = require('util').format
 var stream = require('readable-stream')
 var mkdirp = Q.denodeify(require('mkdirp'))
+var rimraf = Q.denodeify(require('rimraf'))
 
 var utils = require('./utils')
 var provisions = require('./provisions')
@@ -136,55 +137,47 @@ module.exports = function build(baseDir, conf) {
 		)
 	}
 
-	function getAllConfigurations() {
-		return Object.keys(conf.products.reduce(function(confs, product) {
-			confs[product.configuration || 'Debug'] = true
-			return confs
-		}, {}))
-	}
-
 	function buildTarget() {
 		log('Building target')
 
 		var targets = conf.products.slice()
-		var configurations = getAllConfigurations()
 
-		configurations.forEach(function(conf) {
-			targets.unshift({ configuration: conf, clean: true })
-		})
+		var beforeAll = rimraf(conf.build.output)
+			.then(function() { return mkdirp(conf.build.output) })
 
 		targets = targets.map(function(product) {
 			return function() {
-				return mkdirp(conf.build.output)
-				.then(function() {
-					var deferred = Q.defer()
+				var deferred = Q.defer()
 
-					var args =
-					[ '-configuration'
-					  , product.configuration || 'Debug'
-					  , 'SYMROOT=' + path.resolve(conf.build.output)
-					  , product.clean ? 'clean' : 'build'
-					]
-					if(product.target) {
-						args.unshift('-target', product.target)
-					}
+				var args =
+				[ '-configuration'
+				  , product.configuration || 'Debug'
+				  , 'SYMROOT=' + path.resolve(conf.build.output)
+				  , product.clean ? 'clean' : 'build'
+				]
 
-					setupStdout(child_process.spawn(
-					  'xcodebuild'
-					, args
-					, { cwd: path.dirname(conf.project.path)
-					  , stdio: 'pipe'
-					  }
-					))
-						.on('error', deferred.reject)
-						.on('exit', deferred.makeNodeResolver())
+				if(conf.project.path.endsWith('.xcworkspace')) {
+					args.unshift('-workspace', path.basename(conf.project.path))
+					args.unshift('-scheme', product.target)
+				} else {
+					args.unshift('-target', product.target)
+				}
 
-					return deferred.promise
-				})
+				setupStdout(child_process.spawn(
+				  'xcodebuild'
+				, args
+				, { cwd: path.dirname(conf.project.path)
+				  , stdio: 'pipe'
+				  }
+				))
+					.on('error', deferred.reject)
+					.on('exit', deferred.makeNodeResolver())
+
+				return deferred.promise
 			}
 		})
 
-		return targets.reduce(Q.when, Q())
+		return targets.reduce(Q.when, beforeAll)
 	}
 
 	function createIpa() {

@@ -6,6 +6,7 @@
   { "q": "^1.0.1"
   , "through": "^2.3.4"
   , "readable-stream": "~1.0.27"
+  , "rimraf": "^2.2.8"
   , "mkdirp": "^0.5.0"
   }
 , "devDependencies":
